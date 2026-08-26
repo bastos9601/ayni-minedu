@@ -24,6 +24,9 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Habilitar cookies persistentes ANTES de crear el WebView
+        android.webkit.CookieManager.setAcceptFileSchemeCookies(true);
+
         // Inicializar vistas
         webView = findViewById(R.id.webview);
         progressBar = findViewById(R.id.progressBar);
@@ -44,8 +47,13 @@ public class MainActivity extends Activity {
         // Habilitar DOM Storage
         webSettings.setDomStorageEnabled(true);
         
-        // Habilitar cookies
+        // Habilitar cookies y sesión persistente
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        
+        // Asegurar que las cookies persistan entre sesiones
+        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
         
         // Habilitar caché
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -83,6 +91,8 @@ public class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
                 progressBar.setVisibility(View.VISIBLE);
+                // Log para debug - ayuda a ver qué URL está cargando
+                android.util.Log.d("AyniWebView", "Cargando URL: " + url);
             }
 
             @Override
@@ -121,20 +131,27 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
+                
+                // Log detallado del error
+                android.util.Log.e("AyniWebView", "Error en URL: " + failingUrl);
+                android.util.Log.e("AyniWebView", "Código: " + errorCode + ", Descripción: " + description);
+                
                 // Mostrar error más descriptivo
                 String errorHtml = "<html><body style='text-align:center; padding:50px; font-family:Arial;'>" +
                         "<h2>Error de Conexión</h2>" +
                         "<p><b>URL:</b> " + failingUrl + "</p>" +
-                        "<p><b>Error:</b> " + description + "</p>" +
+                        "<p><b>Código de error:</b> " + errorCode + "</p>" +
+                        "<p><b>Descripción:</b> " + description + "</p>" +
                         "<p>Causas posibles:</p>" +
                         "<ul style='text-align:left; max-width:300px; margin:20px auto;'>" +
                         "<li>Sin conexión a Internet</li>" +
                         "<li>El sitio está temporalmente inaccesible</li>" +
                         "<li>Problema con el servidor</li>" +
+                        "<li>Se requiere iniciar sesión primero</li>" +
                         "</ul>" +
-                        "<button onclick='window.location.reload()' style='padding:15px 30px; font-size:16px; margin-top:20px;'>Reintentar</button>" +
+                        "<button onclick='window.location.href=\"" + AYNI_URL + "\"' style='padding:15px 30px; font-size:16px; margin-top:20px;'>Ir a Inicio</button>" +
                         "<br><br>" +
-                        "<button onclick='window.history.back()' style='padding:15px 30px; font-size:16px; margin-top:10px;'>Volver</button>" +
+                        "<button onclick='window.location.reload()' style='padding:15px 30px; font-size:16px; margin-top:10px;'>Reintentar</button>" +
                         "</body></html>";
                 view.loadData(errorHtml, "text/html", "UTF-8");
             }
@@ -207,6 +224,15 @@ public class MainActivity extends Activity {
         if (webView != null) {
             webView.destroy();
         }
+        // Guardar cookies al cerrar
+        android.webkit.CookieManager.getInstance().flush();
         super.onDestroy();
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Guardar cookies al pausar
+        android.webkit.CookieManager.getInstance().flush();
     }
 }
