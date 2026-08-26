@@ -197,14 +197,51 @@ public class MainActivity extends Activity {
             
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                // Cuando el sitio intenta abrir una nueva ventana (popup)
-                // Lo abrimos en el mismo WebView en lugar de crear una nueva ventana
-                WebView.HitTestResult result = view.getHitTestResult();
-                String data = result.getExtra();
-                if (data != null) {
-                    view.loadUrl(data);
-                }
+                // Cuando el sitio intenta abrir una nueva ventana (como "Mi boleta")
+                // Crear un WebView temporal que comparta las cookies y sesión
+                WebView newWebView = new WebView(MainActivity.this);
+                
+                // IMPORTANTE: Configurar el WebView temporal con las mismas opciones
+                // para que comparta la sesión y cookies
+                WebSettings newSettings = newWebView.getSettings();
+                newSettings.setJavaScriptEnabled(true);
+                newSettings.setDomStorageEnabled(true);
+                
+                // Asegurar que comparta las cookies con el WebView principal
+                android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+                cookieManager.setAcceptCookie(true);
+                cookieManager.setAcceptThirdPartyCookies(newWebView, true);
+                
+                // WebViewClient para capturar la URL y cargarla en el WebView principal
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        // Cargar la URL en el WebView PRINCIPAL (no en el temporal)
+                        // Esto mantiene toda la sesión y cookies activas
+                        webView.loadUrl(url);
+                        return true;
+                    }
+                    
+                    @Override
+                    public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                        // Si la página empieza a cargar, redirigir al WebView principal
+                        // para mantener la sesión
+                        webView.loadUrl(url);
+                    }
+                });
+                
+                // Configurar el transporte para la nueva ventana
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
+                
                 return true;
+            }
+            
+            @Override
+            public void onCloseWindow(WebView window) {
+                // Manejar cierre de ventanas emergentes
+                super.onCloseWindow(window);
             }
         });
     }
