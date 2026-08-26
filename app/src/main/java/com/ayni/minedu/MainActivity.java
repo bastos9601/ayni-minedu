@@ -61,11 +61,14 @@ public class MainActivity extends Activity {
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        webSettings.setSupportMultipleWindows(false);
+        webSettings.setSupportMultipleWindows(true); // Cambiar a true para manejar popups
         
         // Permitir acceso a archivos y contenido
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
+        
+        // Deshabilitar safe browsing que puede bloquear algunos enlaces
+        webSettings.setSafeBrowsingEnabled(false);
         
         // User Agent (mantener el predeterminado)
         webSettings.setUserAgentString(webSettings.getUserAgentString());
@@ -83,20 +86,27 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
+                
+                // Inyectar JavaScript para interceptar clicks en enlaces que intenten abrir nueva ventana
+                String jsCode = "javascript:(function() { " +
+                        "var links = document.getElementsByTagName('a'); " +
+                        "for(var i = 0; i < links.length; i++) { " +
+                        "    links[i].removeAttribute('target'); " +
+                        "} " +
+                        "})()";
+                view.loadUrl(jsCode);
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Mantener navegación dentro del WebView
-                // Solo permitir URLs HTTPS
-                if (url.startsWith("https://")) {
-                    // SIEMPRE mantener dentro del WebView todos los enlaces HTTPS
-                    // Esto incluye todos los subdominios de minedu.gob.pe y otros sitios
+                // FORZAR que TODO se abra dentro del WebView
+                // No importa qué URL sea, si es HTTPS, se abre aquí
+                if (url.startsWith("https://") || url.startsWith("http://")) {
                     view.loadUrl(url);
-                    return true;
+                    return true; // Indica que manejamos la navegación
                 }
-                // Bloquear HTTP (no seguro)
-                return true;
+                // Para cualquier otro esquema (tel:, mailto:, etc)
+                return false;
             }
 
             @Override
@@ -128,8 +138,14 @@ public class MainActivity extends Activity {
             
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                // Manejar ventanas emergentes dentro del mismo WebView
-                return false;
+                // Cuando el sitio intenta abrir una nueva ventana (popup)
+                // Lo abrimos en el mismo WebView en lugar de crear una nueva ventana
+                WebView.HitTestResult result = view.getHitTestResult();
+                String data = result.getExtra();
+                if (data != null) {
+                    view.loadUrl(data);
+                }
+                return true;
             }
         });
     }
