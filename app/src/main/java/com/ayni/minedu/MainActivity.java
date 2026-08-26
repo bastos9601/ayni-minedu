@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         
         // Habilitar caché
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        webSettings.setAppCacheEnabled(true);
+        // Nota: setAppCacheEnabled() fue removido en APIs modernas de Android
         
         // Configuración de zoom
         webSettings.setSupportZoom(true);
