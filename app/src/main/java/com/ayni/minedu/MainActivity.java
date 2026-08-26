@@ -61,6 +61,11 @@ public class MainActivity extends Activity {
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setSupportMultipleWindows(false);
+        
+        // Permitir acceso a archivos y contenido
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
         
         // User Agent (mantener el predeterminado)
         webSettings.setUserAgentString(webSettings.getUserAgentString());
@@ -85,12 +90,8 @@ public class MainActivity extends Activity {
                 // Mantener navegación dentro del WebView
                 // Solo permitir URLs HTTPS
                 if (url.startsWith("https://")) {
-                    // Mantener dentro del WebView si es del dominio MINEDU
-                    if (url.contains("minedu.gob.pe")) {
-                        view.loadUrl(url);
-                        return true;
-                    }
-                    // Otros enlaces HTTPS también se mantienen dentro
+                    // SIEMPRE mantener dentro del WebView todos los enlaces HTTPS
+                    // Esto incluye todos los subdominios de minedu.gob.pe y otros sitios
                     view.loadUrl(url);
                     return true;
                 }
@@ -123,6 +124,12 @@ public class MainActivity extends Activity {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
+            }
+            
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                // Manejar ventanas emergentes dentro del mismo WebView
+                return false;
             }
         });
     }
