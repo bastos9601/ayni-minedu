@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        webSettings.setSupportMultipleWindows(true); // Cambiar a true para manejar popups
+        webSettings.setSupportMultipleWindows(false); // CAMBIAR A FALSE - no crear nuevas ventanas
         
         // Permitir acceso a archivos y contenido
         webSettings.setAllowFileAccess(true);
@@ -100,18 +100,39 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
                 
-                // Inyectar JavaScript para interceptar TODOS los métodos de navegación
+                // Inyectar JavaScript MÁS AGRESIVO para interceptar TODO
                 String jsCode = "javascript:(function() { " +
-                        // Remover target="_blank" de todos los enlaces
+                        // 1. Remover target de todos los enlaces
                         "var links = document.getElementsByTagName('a'); " +
                         "for(var i = 0; i < links.length; i++) { " +
                         "    links[i].removeAttribute('target'); " +
+                        "    links[i].onclick = function(e) { " +
+                        "        if(this.href) { " +
+                        "            window.location.href = this.href; " +
+                        "            e.preventDefault(); " +
+                        "            return false; " +
+                        "        } " +
+                        "    }; " +
                         "} " +
-                        // Interceptar window.open y redirigir en la misma ventana
-                        "window.open = function(url, target, features) { " +
-                        "    window.location.href = url; " +
+                        // 2. Sobrescribir window.open COMPLETAMENTE
+                        "window.open = function(url, name, specs, replace) { " +
+                        "    if(url) { " +
+                        "        window.location.href = url; " +
+                        "    } " +
                         "    return window; " +
                         "}; " +
+                        // 3. Interceptar cualquier intento de crear popup
+                        "window.addEventListener('click', function(e) { " +
+                        "    var target = e.target; " +
+                        "    while(target && target.tagName !== 'A') { " +
+                        "        target = target.parentElement; " +
+                        "    } " +
+                        "    if(target && target.href && target.target === '_blank') { " +
+                        "        e.preventDefault(); " +
+                        "        window.location.href = target.href; " +
+                        "        return false; " +
+                        "    } " +
+                        "}, true); " +
                         "})()";
                 view.loadUrl(jsCode);
             }
@@ -197,45 +218,9 @@ public class MainActivity extends Activity {
             
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                // Cuando el sitio intenta abrir una nueva ventana (como "Mi boleta")
-                // Crear un WebView temporal que comparta las cookies y sesión
-                WebView newWebView = new WebView(MainActivity.this);
-                
-                // IMPORTANTE: Configurar el WebView temporal con las mismas opciones
-                // para que comparta la sesión y cookies
-                WebSettings newSettings = newWebView.getSettings();
-                newSettings.setJavaScriptEnabled(true);
-                newSettings.setDomStorageEnabled(true);
-                
-                // Asegurar que comparta las cookies con el WebView principal
-                android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
-                cookieManager.setAcceptCookie(true);
-                cookieManager.setAcceptThirdPartyCookies(newWebView, true);
-                
-                // WebViewClient para capturar la URL y cargarla en el WebView principal
-                newWebView.setWebViewClient(new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        // Cargar la URL en el WebView PRINCIPAL (no en el temporal)
-                        // Esto mantiene toda la sesión y cookies activas
-                        webView.loadUrl(url);
-                        return true;
-                    }
-                    
-                    @Override
-                    public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                        // Si la página empieza a cargar, redirigir al WebView principal
-                        // para mantener la sesión
-                        webView.loadUrl(url);
-                    }
-                });
-                
-                // Configurar el transporte para la nueva ventana
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(newWebView);
-                resultMsg.sendToTarget();
-                
-                return true;
+                // NO permitir crear nuevas ventanas - devolver false
+                // Esto forzará que todo se abra en la misma ventana
+                return false;
             }
             
             @Override
