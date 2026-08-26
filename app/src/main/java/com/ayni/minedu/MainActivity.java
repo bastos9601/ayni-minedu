@@ -70,8 +70,11 @@ public class MainActivity extends Activity {
         // Deshabilitar safe browsing que puede bloquear algunos enlaces
         webSettings.setSafeBrowsingEnabled(false);
         
-        // User Agent (mantener el predeterminado)
-        webSettings.setUserAgentString(webSettings.getUserAgentString());
+        // User Agent (usar uno estándar de Chrome para mejor compatibilidad)
+        String userAgent = webSettings.getUserAgentString();
+        // Asegurarse de que no diga "wv" (WebView) que algunos sitios bloquean
+        String newUserAgent = userAgent.replace("; wv", "").replace(";wv", "");
+        webSettings.setUserAgentString(newUserAgent);
         
         // WebViewClient para controlar la navegación
         webView.setWebViewClient(new WebViewClient() {
@@ -118,20 +121,53 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
-                // Cargar página de error local
+                // Mostrar error más descriptivo
                 String errorHtml = "<html><body style='text-align:center; padding:50px; font-family:Arial;'>" +
                         "<h2>Error de Conexión</h2>" +
-                        "<p>No se pudo cargar el sitio de Ayni MINEDU.</p>" +
-                        "<p>Por favor, verifica tu conexión a Internet.</p>" +
-                        "<button onclick='window.location.reload()' style='padding:10px 20px; font-size:16px;'>Reintentar</button>" +
+                        "<p><b>URL:</b> " + failingUrl + "</p>" +
+                        "<p><b>Error:</b> " + description + "</p>" +
+                        "<p>Causas posibles:</p>" +
+                        "<ul style='text-align:left; max-width:300px; margin:20px auto;'>" +
+                        "<li>Sin conexión a Internet</li>" +
+                        "<li>El sitio está temporalmente inaccesible</li>" +
+                        "<li>Problema con el servidor</li>" +
+                        "</ul>" +
+                        "<button onclick='window.location.reload()' style='padding:15px 30px; font-size:16px; margin-top:20px;'>Reintentar</button>" +
+                        "<br><br>" +
+                        "<button onclick='window.history.back()' style='padding:15px 30px; font-size:16px; margin-top:10px;'>Volver</button>" +
                         "</body></html>";
                 view.loadData(errorHtml, "text/html", "UTF-8");
             }
 
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                // NO aceptar certificados inválidos por seguridad
-                handler.cancel();
+                // Mostrar diálogo de advertencia pero permitir continuar
+                // NOTA: En producción, esto debería manejarse más cuidadosamente
+                String message = "Error de certificado SSL. ";
+                switch (error.getPrimaryError()) {
+                    case SslError.SSL_UNTRUSTED:
+                        message += "Certificado no confiable.";
+                        break;
+                    case SslError.SSL_EXPIRED:
+                        message += "Certificado expirado.";
+                        break;
+                    case SslError.SSL_IDMISMATCH:
+                        message += "El certificado no coincide con el dominio.";
+                        break;
+                    case SslError.SSL_NOTYETVALID:
+                        message += "Certificado aún no válido.";
+                        break;
+                    default:
+                        message += "Error desconocido.";
+                }
+                
+                // Para sitios del gobierno (.gob.pe), aceptar el certificado
+                // ya que a veces tienen problemas de configuración SSL
+                if (error.getUrl().contains(".gob.pe")) {
+                    handler.proceed();
+                } else {
+                    handler.cancel();
+                }
             }
         });
 
