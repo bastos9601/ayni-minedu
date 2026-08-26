@@ -1,0 +1,7 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.AyniMINEDU" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#0066cc</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+    </style>
+</resources>
