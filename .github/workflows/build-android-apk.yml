@@ -29,17 +29,18 @@ jobs:
           gradle-version: 8.1.1
 
       - name: Build APK
-        run: gradle assembleRelease
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ayni-minedu-apk
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           
       - name: Build info
         run: |
           echo "✅ APK generado exitosamente!"
           echo "📱 Nombre: Ayni MINEDU"
-          echo "📦 Ubicación: app/build/outputs/apk/release/"
+          echo "📦 Tipo: Debug APK (instalable sin firma)"
+          echo "📦 Ubicación: app/build/outputs/apk/debug/"
           echo "⬇️ Descarga el APK desde la pestaña 'Actions' > 'Artifacts'"
