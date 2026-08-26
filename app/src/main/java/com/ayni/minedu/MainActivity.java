@@ -87,12 +87,18 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
                 
-                // Inyectar JavaScript para interceptar clicks en enlaces que intenten abrir nueva ventana
+                // Inyectar JavaScript para interceptar TODOS los métodos de navegación
                 String jsCode = "javascript:(function() { " +
+                        // Remover target="_blank" de todos los enlaces
                         "var links = document.getElementsByTagName('a'); " +
                         "for(var i = 0; i < links.length; i++) { " +
                         "    links[i].removeAttribute('target'); " +
                         "} " +
+                        // Interceptar window.open y redirigir en la misma ventana
+                        "window.open = function(url, target, features) { " +
+                        "    window.location.href = url; " +
+                        "    return window; " +
+                        "}; " +
                         "})()";
                 view.loadUrl(jsCode);
             }
